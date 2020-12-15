@@ -1,10 +1,8 @@
-package it.unibo.oop.lab.reactivegui01;
+package it.unibo.oop.lab.reactivegui02;
 
 
 import java.awt.Dimension;
 import java.awt.Toolkit;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.lang.reflect.InvocationTargetException;
 
 import javax.swing.JButton;
@@ -22,7 +20,9 @@ public final class ConcurrentGUI extends JFrame {
     private static final double WIDTH_PERC = 0.2;
     private static final double HEIGHT_PERC = 0.1;
     private final JLabel display = new JLabel();
-    private final JButton stop = new JButton("stop");
+    private final JButton stopButton = new JButton("Stop");
+    private final JButton upButton = new JButton("Up");
+    private final JButton downButton = new JButton("Down");
 
     /**
      * Builds a new CGUI.
@@ -34,7 +34,9 @@ public final class ConcurrentGUI extends JFrame {
         this.setDefaultCloseOperation(EXIT_ON_CLOSE);
         final JPanel panel = new JPanel();
         panel.add(display);
-        panel.add(stop);
+        panel.add(upButton);
+        panel.add(downButton);
+        panel.add(stopButton);
         this.getContentPane().add(panel);
         this.setVisible(true);
         /*
@@ -43,23 +45,15 @@ public final class ConcurrentGUI extends JFrame {
          * java.util.concurrent.ExecutorService
          */
         final Agent agent = new Agent();
-        new Thread(agent).start();
-        /*
-         * Register a listener that stops it
-         */
-        stop.addActionListener(new ActionListener() {
-            /**
-             * event handler associated to action event on button stop.
-             * 
-             * @param e
-             *            the action event that will be handled by this listener
-             */
-            @Override
-            public void actionPerformed(final ActionEvent e) {
-                // Agent should be final
-                agent.stopCounting();
-            }
+        upButton.addActionListener(e -> agent.upCounting());
+        downButton.addActionListener(e -> agent.downCounting());
+        stopButton.addActionListener(e -> {
+            agent.stopCounting();
+            stopButton.setEnabled(false);
+            upButton.setEnabled(false);
+            downButton.setEnabled(false);
         });
+        new Thread(agent).start();
     }
 
     /*
@@ -78,7 +72,8 @@ public final class ConcurrentGUI extends JFrame {
          * 
          */
         private volatile boolean stop;
-        private volatile int counter = 0;
+        private volatile int counter;
+        private volatile boolean forward = true;
 
         @Override
         public void run() {
@@ -89,7 +84,11 @@ public final class ConcurrentGUI extends JFrame {
                      * Event-Dispatch Thread (EDT)!
                      */
                     SwingUtilities.invokeAndWait(() -> ConcurrentGUI.this.display.setText(Integer.toString(this.counter)));
-                    this.counter++;
+                    if (this.forward) {
+                        this.counter++;
+                    } else {
+                        this.counter--;
+                    }
                     Thread.sleep(100);
                 } catch (InvocationTargetException | InterruptedException ex) {
                     /*
@@ -106,6 +105,20 @@ public final class ConcurrentGUI extends JFrame {
          */
         public void stopCounting() {
             this.stop = true;
+        }
+
+        /**
+         * External command to count forward.
+         */
+        public void upCounting() {
+            this.forward = true;
+        }
+
+        /**
+         * External command to count backward.
+         */
+        public void downCounting() {
+            this.forward = false;
         }
     }
 }
